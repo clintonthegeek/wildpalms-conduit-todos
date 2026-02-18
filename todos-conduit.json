@@ -3,18 +3,18 @@
         "Name": "Todo Conduit",
         "Description": "Synchronizes Palm ToDoDB with iCalendar VTODO files",
         "Icon": "view-pim-tasks",
-        "Authors": [{ "Name": "QPilotSync contributors" }],
+        "Authors": [{ "Name": "Clinton Ignatov" }],
         "License": "GPL",
         "Version": "1.0.0",
         "Category": "Sync"
     },
-    "X-QPilotSync-ConduitId": "todos",
-    "X-QPilotSync-ConduitType": "sync",
-    "X-QPilotSync-PalmCreatorId": "todo",
-    "X-QPilotSync-PalmDatabase": "ToDoDB",
-    "X-QPilotSync-RequiresDevice": true,
-    "X-QPilotSync-RunBefore": [],
-    "X-QPilotSync-RunAfter": [],
-    "X-QPilotSync-DefaultEnabled": true,
-    "X-QPilotSync-SortOrder": 3
+    "X-WildPalms-ConduitId": "todos",
+    "X-WildPalms-ConduitType": "sync",
+    "X-WildPalms-PalmCreatorId": "todo",
+    "X-WildPalms-PalmDatabase": "ToDoDB",
+    "X-WildPalms-RequiresDevice": true,
+    "X-WildPalms-RunBefore": [],
+    "X-WildPalms-RunAfter": [],
+    "X-WildPalms-DefaultEnabled": true,
+    "X-WildPalms-SortOrder": 3
 }

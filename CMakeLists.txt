@@ -1,4 +1,4 @@
-kcoreaddons_add_plugin(qpilotsync_todos
+kcoreaddons_add_plugin(wildpalms_todos
     SOURCES
         todoconduit.cpp
         todoconduit.h
@@ -6,11 +6,11 @@ kcoreaddons_add_plugin(qpilotsync_todos
         todomapper.h
         taskview.cpp
         taskview.h
-    INSTALL_NAMESPACE "qpilotsync/conduits"
+    INSTALL_NAMESPACE "wildpalms/conduits"
 )
 
-target_link_libraries(qpilotsync_todos
-    QPilotCore
+target_link_libraries(wildpalms_todos
+    WildPalmsCore
     KF6::CoreAddons
     KF6::CalendarCore
     KF6::I18n

@@ -204,7 +204,7 @@ void TaskView::loadTasks()
             task.recordId = 0;
 
             // Parse record ID from custom property if present
-            QString recordIdStr = todo->customProperty("QPILOTSYNC", "RECORD_ID");
+            QString recordIdStr = todo->customProperty("WILDPALMS", "RECORD_ID");
             if (!recordIdStr.isEmpty()) {
                 task.recordId = recordIdStr.toInt();
             }
@@ -519,7 +519,7 @@ bool TaskView::saveToFile()
         }
 
         // Store record ID as custom property (0 for new records)
-        todo->setCustomProperty("QPILOTSYNC", "RECORD_ID",
+        todo->setCustomProperty("WILDPALMS", "RECORD_ID",
                                  QString::number(task.recordId));
 
         calendar->addTodo(todo);
