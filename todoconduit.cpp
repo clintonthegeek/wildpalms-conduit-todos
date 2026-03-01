@@ -3,8 +3,8 @@
 #include "taskview.h"
 #include "palm/pilotrecord.h"
 #include "palm/categoryinfo.h"
-#include "palm/kpilotdevicelink.h"
 #include "sync/localfilebackend.h"
+#include "sync/qsynccore/conflictrecord.h"
 
 #include <QDebug>
 
@@ -15,54 +15,10 @@ TodoConduit::TodoConduit(QObject *parent)
 {
 }
 
-TodoConduit::~TodoConduit()
-{
-    delete m_categories;
-}
-
-void TodoConduit::loadCategories(SyncContext *context)
-{
-    if (m_categories) {
-        delete m_categories;
-        m_categories = nullptr;
-    }
-    m_originalAppInfo.clear();
-
-    if (!context || !context->deviceLink || m_dbHandle < 0) {
-        return;
-    }
-
-    m_categories = new CategoryInfo();
-
-    unsigned char appInfoBuf[4096];
-    size_t appInfoSize = sizeof(appInfoBuf);
-
-    if (context->deviceLink->readAppBlock(m_dbHandle, appInfoBuf, &appInfoSize)) {
-        // Store original AppInfo block for later write-back
-        m_originalAppInfo = QByteArray(reinterpret_cast<const char*>(appInfoBuf), appInfoSize);
-
-        m_categories->parse(appInfoBuf, appInfoSize);
-        emit logMessage(QString("Loaded %1 categories").arg(m_categories->usedCategories().size()));
-    }
-}
-
-QString TodoConduit::categoryName(int categoryIndex) const
-{
-    if (m_categories) {
-        return m_categories->categoryName(categoryIndex);
-    }
-    return QString();
-}
-
 BackendRecord* TodoConduit::palmToBackend(PilotRecord *palmRecord,
                                            SyncContext *context)
 {
     if (!palmRecord) return nullptr;
-
-    // Ensure categories are loaded
-    if (!m_categories) {
-        loadCategories(context);
-    }
 
     // Unpack Palm todo
     TodoMapper::Todo todo = TodoMapper::unpackTodo(palmRecord);
@@ -99,11 +55,6 @@ PilotRecord* TodoConduit::backendToPalm(BackendRecord *backendRecord,
                                          SyncContext *context)
 {
     if (!backendRecord) return nullptr;
-
-    // Ensure categories are loaded
-    if (!m_categories) {
-        loadCategories(context);
-    }
 
     // Parse iCalendar content
     QString content = QString::fromUtf8(backendRecord->data);
@@ -197,65 +148,77 @@ QString TodoConduit::palmRecordDescription(PilotRecord *record) const
     return desc;
 }
 
-bool TodoConduit::writeModifiedCategories(SyncContext *context)
+void TodoConduit::enrichConflictSnapshot(QSyncCore::RecordSnapshot &snapshot,
+                                          bool isSourceSide) const
 {
-    // Check if we have categories that were modified
-    if (!m_categories || !m_categories->isDirty()) {
-        return true;  // Nothing to write
-    }
+    if (snapshot.content.isEmpty()) return;
 
-    if (!context || !context->deviceLink || m_dbHandle < 0) {
-        emit logMessage("Warning: Cannot write categories - no device connection");
-        return false;
-    }
+    TodoMapper::Todo todo;
 
-    emit logMessage("Writing modified categories back to Palm...");
-
-    // The AppInfo block contains more than just categories for ToDoDB
-    // We need to preserve the app-specific portion and only update categories
-
-    // For ToDoDB, the AppInfo structure is:
-    //   - CategoryAppInfo_t (276 bytes typically)
-    //   - App-specific data (dirty flag, sort order, etc.)
-
-    size_t catSize = m_categories->packSize();
-
-    if (m_originalAppInfo.isEmpty()) {
-        // No original - just write categories
-        QByteArray buffer(catSize, 0);
-        int packed = m_categories->pack(reinterpret_cast<unsigned char*>(buffer.data()), buffer.size());
-        if (packed < 0) {
-            emit logMessage("Warning: Failed to pack categories");
-            return false;
-        }
-
-        if (!context->deviceLink->writeAppBlock(m_dbHandle,
-                reinterpret_cast<const unsigned char*>(buffer.constData()), packed)) {
-            emit logMessage("Warning: Failed to write categories to Palm");
-            return false;
-        }
+    if (isSourceSide) {
+        // Source: Palm binary — unpack via mapper, convert to iCal VTODO text
+        PilotRecord tempRecord(0, 0, 0, snapshot.content);
+        todo = TodoMapper::unpackTodo(&tempRecord);
+        QString catName = categoryName(todo.category);
+        snapshot.content = TodoMapper::todoToICal(todo, catName).toUtf8();
     } else {
-        // We have original AppInfo - update category portion and preserve the rest
-        QByteArray buffer = m_originalAppInfo;
-
-        // Pack categories into the beginning of the buffer
-        int packed = m_categories->pack(reinterpret_cast<unsigned char*>(buffer.data()),
-                                         qMin(static_cast<size_t>(buffer.size()), catSize));
-        if (packed < 0) {
-            emit logMessage("Warning: Failed to pack categories");
-            return false;
-        }
-
-        if (!context->deviceLink->writeAppBlock(m_dbHandle,
-                reinterpret_cast<const unsigned char*>(buffer.constData()), buffer.size())) {
-            emit logMessage("Warning: Failed to write AppInfo block to Palm");
-            return false;
-        }
+        // Target: already iCal VTODO text — parse for metadata
+        todo = TodoMapper::iCalToTodo(QString::fromUtf8(snapshot.content));
     }
 
-    m_categories->clearDirty();
-    emit logMessage("Categories updated on Palm");
-    return true;
+    // Populate metadata
+    if (!todo.description.isEmpty())
+        snapshot.metadata[QStringLiteral("description")] = todo.description;
+    snapshot.metadata[QStringLiteral("priority")] = todo.priority;
+    if (!todo.hasIndefiniteDue && todo.due.isValid())
+        snapshot.metadata[QStringLiteral("due_date")] = todo.due.toString(QStringLiteral("yyyy-MM-dd"));
+    snapshot.metadata[QStringLiteral("completed")] = todo.isComplete;
+    if (!todo.note.isEmpty())
+        snapshot.metadata[QStringLiteral("notes")] = todo.note;
+
+    snapshot.contentType = QStringLiteral("text/calendar");
+}
+
+QString TodoConduit::formatConflictRecordHtml(const QSyncCore::RecordSnapshot &snapshot) const
+{
+    QString html;
+    const QVariantMap &m = snapshot.metadata;
+
+    QString desc = m.value(QStringLiteral("description")).toString();
+    if (!desc.isEmpty())
+        html += QStringLiteral("<h3>%1</h3>").arg(desc.toHtmlEscaped());
+
+    html += QStringLiteral("<table cellpadding='4'>");
+
+    // Priority badge
+    int priority = m.value(QStringLiteral("priority"), 0).toInt();
+    if (priority > 0) {
+        QString color = (priority <= 2) ? QStringLiteral("#d32f2f") :
+                         (priority <= 3) ? QStringLiteral("#f57c00") :
+                                           QStringLiteral("#388e3c");
+        html += QStringLiteral("<tr><td><b>Priority:</b></td><td>"
+                "<span style='background-color:%1; color:white; padding:2px 6px; border-radius:3px;'>%2</span>"
+                "</td></tr>").arg(color).arg(priority);
+    }
+
+    auto addRow = [&html](const QString &label, const QString &value) {
+        if (!value.isEmpty())
+            html += QStringLiteral("<tr><td><b>%1:</b></td><td>%2</td></tr>")
+                .arg(label.toHtmlEscaped(), value.toHtmlEscaped());
+    };
+
+    addRow(QStringLiteral("Due Date"), m.value(QStringLiteral("due_date")).toString());
+
+    bool completed = m.value(QStringLiteral("completed"), false).toBool();
+    html += QStringLiteral("<tr><td><b>Status:</b></td><td>%1</td></tr>")
+        .arg(completed ? QStringLiteral("<span style='color:green;'>Completed</span>")
+                       : QStringLiteral("<span style='color:orange;'>In Progress</span>"));
+
+    addRow(QStringLiteral("Notes"), m.value(QStringLiteral("notes")).toString());
+
+    html += QStringLiteral("</table>");
+
+    return html;
 }
 
 QWidget *TodoConduit::createView(QWidget *parent)
