@@ -11,7 +11,7 @@
     "X-WildPalms-ConduitId": "todos",
     "X-WildPalms-ConduitType": "sync",
     "X-WildPalms-PalmCreatorId": "todo",
-    "X-WildPalms-PalmDatabase": "ToDoDB",
+    "X-WildPalms-PalmDatabases": ["ToDoDB"],
     "X-WildPalms-RequiresDevice": true,
     "X-WildPalms-RunBefore": [],
     "X-WildPalms-RunAfter": [],

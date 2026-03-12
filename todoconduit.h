@@ -26,7 +26,7 @@ public:
 
     QString conduitId() const override { return "todos"; }
     QString displayName() const override { return "Tasks"; }
-    QString palmDatabaseName() const override { return "ToDoDB"; }
+    QStringList palmDatabaseNames() const override { return {"ToDoDB"}; }
     QString fileExtension() const override { return ".ics"; }
 
     // ========== Record Conversion ==========
@@ -37,9 +37,11 @@ public:
     PilotRecord* backendToPalm(BackendRecord *backendRecord,
                                 SyncContext *context) override;
 
-    bool recordsEqual(PilotRecord *palm, BackendRecord *backend) const override;
+    bool recordsEqual(PilotRecord *palm, BackendRecord *backend,
+                       const SyncContext *context) const override;
 
-    QString palmRecordDescription(PilotRecord *record) const override;
+    QString palmRecordDescription(PilotRecord *record,
+                                   const SyncContext *context) const override;
 
     // ========== UI Contribution ==========
     QIcon icon() const override {

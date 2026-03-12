@@ -81,8 +81,10 @@ PilotRecord* TodoConduit::backendToPalm(BackendRecord *backendRecord,
     return record;
 }
 
-bool TodoConduit::recordsEqual(PilotRecord *palm, BackendRecord *backend) const
+bool TodoConduit::recordsEqual(PilotRecord *palm, BackendRecord *backend,
+                                const SyncContext *context) const
 {
+    Q_UNUSED(context);
     if (!palm || !backend) return false;
 
     // Unpack Palm todo
@@ -127,8 +129,10 @@ bool TodoConduit::recordsEqual(PilotRecord *palm, BackendRecord *backend) const
     return true;
 }
 
-QString TodoConduit::palmRecordDescription(PilotRecord *record) const
+QString TodoConduit::palmRecordDescription(PilotRecord *record,
+                                            const SyncContext *context) const
 {
+    Q_UNUSED(context);
     if (!record) return QString();
 
     TodoMapper::Todo todo = TodoMapper::unpackTodo(record);
