@@ -142,7 +142,7 @@ QString TodoBackendPlugin::formatConflictRecordHtml(
         html += QStringLiteral("<h3>%1</h3>").arg(title.toHtmlEscaped());
     }
     if (!complete.isEmpty()) {
-        html += QStringLiteral("<p><b>Complete:</b> %1</p>").arg(complete);
+        html += QStringLiteral("<p><b>Complete:</b> %1</p>").arg(complete.toHtmlEscaped());
     }
     html += QStringLiteral("<pre>%1</pre>")
         .arg(QString::fromUtf8(snapshot.content).toHtmlEscaped());
