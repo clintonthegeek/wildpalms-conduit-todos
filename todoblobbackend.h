@@ -26,7 +26,7 @@ namespace WildPalms::TodoPlugin {
  * Lifetime: does NOT own palmBackend or categoryStore. Caller retains
  * ownership; both must outlive the backend.
  */
-class TodoBlobBackend : public Kalburator::Sync::IBlobBackend
+class TodoBlobBackend : public QObject, public Kalburator::Sync::IBlobBackend
 {
     Q_OBJECT
 public:
@@ -69,6 +69,13 @@ public:
     static int slotFromCollectionId(const QString &collectionId);
     /// Produce "palm:todo/<N>".
     static QString collectionIdForSlot(int slot);
+
+Q_SIGNALS:
+    void recordCreated(const QString &recordId);
+    void recordUpdated(const QString &recordId);
+    void recordDeleted(const QString &recordId);
+    void errorOccurred(const QString &error);
+    void progressUpdated(int current, int total, const QString &message);
 
 private:
     WildPalms::PalmSync::PalmBackend                     *m_palmBackend = nullptr;
