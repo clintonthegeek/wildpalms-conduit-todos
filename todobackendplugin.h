@@ -5,35 +5,20 @@
 
 #include <QObject>
 
-#include "core/ibackendplugin.h"
+#include "core/ibackendplugin_v2.h"
 
+namespace Kalburator::Sync::QSyncCore { struct RecordSnapshot; }
 namespace WildPalms::PalmCalendar { class CategoryMappingStore; }
 namespace WildPalms::PalmConflict { struct PalmBackendConfig; }
-class PalmDeviceConnection;
+namespace WildPalms::PalmSync { class PalmBackend; }
+namespace WildPalms::Runtime { class PalmDeviceAccess; }
 
 namespace WildPalms::TodoPlugin {
 
-/**
- * @brief Third new-ABI WildPalms plugin (after Memo E.9, Calendar E.10).
- *
- * Provides:
- *   - TodoBlobBackend wrapping the shared PalmBackend (one
- *     collection per populated category slot under "ToDoDB").
- *   - No typed SyncBackend; libkalburator has no typed-todo upper
- *     layer (extract-on-second-consumer per parent spec).
- *   - TodoConflictHandler (completion-asymmetric overlay + Palm
- *     delegation).
- *
- * Owns the per-session CategoryMappingStore, populated from the
- * ToDoDB AppInfo block at createBackends() time.
- *
- * Surfaces TaskView as a main-window tab (reused unchanged from
- * the legacy TodoConduit).
- */
-class TodoBackendPlugin : public QObject, public WildPalms::IBackendPlugin
+class TodoBackendPlugin : public QObject, public WildPalms::IBackendPluginV2
 {
     Q_OBJECT
-    Q_INTERFACES(WildPalms::IBackendPlugin)
+    Q_INTERFACES(WildPalms::IBackendPluginV2)
 public:
     explicit TodoBackendPlugin(QObject *parent = nullptr);
     ~TodoBackendPlugin() override;
@@ -45,31 +30,32 @@ public:
     QString description() const override;
     QString version()     const override;
 
-    // IBackendPlugin
-    QStringList      claimedDatabases() const override;
-    ProvidedBackends createBackends(Kalburator::Sync::ISyncHost *host,
-                                    PalmDeviceConnection         *device) override;
+    // IBackendPluginV2
+    QStringList claimedDatabases() const override;
+    std::unique_ptr<Kalburator::Sync::IBlobBackend>
+        createPalmBackend(WildPalms::Runtime::PalmDeviceAccess *device) override;
 
-    // IBackendPlugin — conflict handler
+    // IBackendPluginV2 — conflict handler
     Kalburator::Sync::QSyncCore::ConflictHandler *createConflictHandler() override;
 
-    // IBackendPlugin — main view
+    // IBackendPluginV2 — main view
     bool     hasMainView()   const override;
     QWidget *createMainView(QWidget *parent) const override;
     QString  mainViewName()  const override;
     QIcon    mainViewIcon()  const override;
 
-    // IBackendPlugin — conflict presentation
+    // Conflict presentation (called by conflict UI layer; not virtual in v2)
     void    enrichConflictSnapshot(
         Kalburator::Sync::QSyncCore::RecordSnapshot &snapshot,
-        bool isSourceSide) const override;
+        bool isSourceSide) const;
     QString formatConflictRecordHtml(
-        const Kalburator::Sync::QSyncCore::RecordSnapshot &snapshot) const override;
+        const Kalburator::Sync::QSyncCore::RecordSnapshot &snapshot) const;
 
 private:
     std::unique_ptr<WildPalms::PalmCalendar::CategoryMappingStore> m_categoryStore;
     std::unique_ptr<WildPalms::PalmConflict::PalmBackendConfig>    m_palmConfig;
-    PalmDeviceConnection *m_device = nullptr;   // borrowed; cached for createConflictHandler
+    std::unique_ptr<WildPalms::PalmSync::PalmBackend>              m_palmBackend;
+    WildPalms::Runtime::PalmDeviceAccess *m_device = nullptr; // borrowed; cached for createConflictHandler
 };
 
 } // namespace WildPalms::TodoPlugin

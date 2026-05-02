@@ -8,8 +8,8 @@
 #include "palm/calendar/categoryappinforeader.h"
 #include "palm/calendar/categorymappingstore.h"
 #include "palm/conflict/palmbackendconfig.h"
-#include "palm/palmdeviceconnection.h"
 #include "palm/sync/palmbackend.h"
+#include "runtime/palmdeviceaccess.h"
 #include "palm/codecs/todocodec.h"
 
 #include "conflictrecord.h"
@@ -56,45 +56,33 @@ QStringList TodoBackendPlugin::claimedDatabases() const
     return { QStringLiteral("ToDoDB") };
 }
 
-WildPalms::IBackendPlugin::ProvidedBackends
-TodoBackendPlugin::createBackends(Kalburator::Sync::ISyncHost *host,
-                                  PalmDeviceConnection         *device)
+std::unique_ptr<Kalburator::Sync::IBlobBackend>
+TodoBackendPlugin::createPalmBackend(WildPalms::Runtime::PalmDeviceAccess *device)
 {
-    Q_UNUSED(host)
-    ProvidedBackends out;
-    if (!device) return out;
+    if (!device) return nullptr;
 
-    // Cached for createConflictHandler. Re-entry overwrites: the
-    // IBackendPlugin contract is once-per-session per device, so a
-    // second call implies a new session and is intentional.
     m_device = device;
+    m_palmBackend = std::make_unique<WildPalms::PalmSync::PalmBackend>(device);
 
-    auto *palmBackend = device->palmBackend();
-    if (palmBackend) {
-        // Populate the category store from AppInfo. Failure is non-fatal:
-        // the backend still surfaces palm:todo/0 ("Unfiled").
-        WildPalms::PalmCalendar::populateFromAppInfo(
-            *m_categoryStore,
-            QStringLiteral("ToDoDB"),
-            palmBackend->readAppBlock(QStringLiteral("ToDoDB")));
-        out.blob = new TodoBlobBackend(palmBackend, m_categoryStore.get());
-    }
+    WildPalms::PalmCalendar::populateFromAppInfo(
+        *m_categoryStore,
+        QStringLiteral("ToDoDB"),
+        m_palmBackend->readAppBlock(QStringLiteral("ToDoDB")));
 
-    // No typed SyncBackend: libkalburator has no typed-todo upstream
-    // layer. out.calendar stays null.
-    return out;
+    return std::make_unique<TodoBlobBackend>(m_palmBackend.get(), m_categoryStore.get());
 }
 
 Kalburator::Sync::QSyncCore::ConflictHandler *
 TodoBackendPlugin::createConflictHandler()
 {
-    if (!m_device || !m_device->device()) {
+    if (!m_device) {
         qCWarning(WP_TODO_PLUGIN)
-            << "createConflictHandler called before createBackends — "
-               "manager must invoke createBackends first to wire the device.";
+            << "createConflictHandler called before createPalmBackend — "
+               "runtime must invoke createPalmBackend first to wire the device.";
         return nullptr;
     }
-    return new TodoConflictHandler(m_device->device(), m_palmConfig.get());
+    // PalmDeviceAccess IS-A IPalmDatabaseAccess; no cast needed.
+    return new TodoConflictHandler(m_device, m_palmConfig.get());
 }
 
 bool TodoBackendPlugin::hasMainView() const { return true; }
