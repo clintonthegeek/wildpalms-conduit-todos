@@ -36,16 +36,16 @@ namespace WildPalms::TodoPlugin {
  * Lifetime: does NOT own device or config. Both must outlive the
  * handler.
  */
-class TodoConflictHandler : public Kalburator::Sync::QSyncCore::ConflictHandler
+class TodoConflictHandler : public Kalburator::Conflict::ConflictHandler
 {
 public:
     TodoConflictHandler(WildPalms::PalmSync::IPalmDatabaseAccess *device,
                         const WildPalms::PalmConflict::PalmBackendConfig *config);
     ~TodoConflictHandler() override;
 
-    Kalburator::Sync::QSyncCore::ConflictDecision handleConflict(
-        Kalburator::Sync::QSyncCore::ConflictRecord &conflict,
-        const Kalburator::Sync::QSyncCore::ConflictPolicy &policy) override;
+    Kalburator::Conflict::ConflictDecision handleConflict(
+        Kalburator::Conflict::ConflictRecord &conflict,
+        const Kalburator::Conflict::ConflictPolicy &policy) override;
 
     bool canPrompt() const override { return false; }
 

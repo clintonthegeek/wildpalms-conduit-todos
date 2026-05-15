@@ -72,9 +72,9 @@ TodoConflictHandler::TodoConflictHandler(
 
 TodoConflictHandler::~TodoConflictHandler() = default;
 
-Kalburator::Sync::QSyncCore::ConflictDecision TodoConflictHandler::handleConflict(
-    Kalburator::Sync::QSyncCore::ConflictRecord &conflict,
-    const Kalburator::Sync::QSyncCore::ConflictPolicy &policy)
+Kalburator::Conflict::ConflictDecision TodoConflictHandler::handleConflict(
+    Kalburator::Conflict::ConflictRecord &conflict,
+    const Kalburator::Conflict::ConflictPolicy &policy)
 {
     // Same-slot decode (slot doesn't matter for the overlay; defaults
     // to 0 — we re-stamp the merged record with peer's slot below).
@@ -107,7 +107,7 @@ Kalburator::Sync::QSyncCore::ConflictDecision TodoConflictHandler::handleConflic
         const Todo       &peerTodo   = sourceFlipped ? target.todo   : source.todo;
         conflict.mergedContent = buildMergedIcs(peerRecord, peerTodo);
         m_lastOverlay = QStringLiteral("completion-asymmetric");
-        return Kalburator::Sync::QSyncCore::ConflictDecision::Merge;
+        return Kalburator::Conflict::ConflictDecision::Merge;
     }
 
     m_lastOverlay = QStringLiteral("delegated");

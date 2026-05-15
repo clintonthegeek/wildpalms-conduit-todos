@@ -29,16 +29,14 @@ Q_LOGGING_CATEGORY(WP_TODO_PLUGIN, "wildpalms.todo.plugin")
 
 namespace WildPalms::TodoPlugin {
 
-TodoBackendPlugin::TodoBackendPlugin(QObject *parent)
-    : QObject(parent)
-    , m_categoryStore(std::make_unique<WildPalms::PalmCalendar::CategoryMappingStore>())
+TodoBackendPlugin::TodoBackendPlugin()
+    : m_categoryStore(std::make_unique<WildPalms::PalmCalendar::CategoryMappingStore>())
     , m_palmConfig(std::make_unique<WildPalms::PalmConflict::PalmBackendConfig>())
 {
 }
 
 TodoBackendPlugin::~TodoBackendPlugin() = default;
 
-QString TodoBackendPlugin::pluginId()    const { return QStringLiteral("todo"); }
 QString TodoBackendPlugin::displayName() const { return QStringLiteral("Tasks"); }
 QIcon   TodoBackendPlugin::icon()        const
 {
@@ -51,12 +49,7 @@ QString TodoBackendPlugin::description() const
 }
 QString TodoBackendPlugin::version()     const { return QStringLiteral("2.0"); }
 
-QStringList TodoBackendPlugin::claimedDatabases() const
-{
-    return { QStringLiteral("ToDoDB") };
-}
-
-std::unique_ptr<Kalburator::Sync::IBlobBackend>
+std::unique_ptr<Kalburator::Sync::SyncBackend>
 TodoBackendPlugin::createPalmBackend(WildPalms::Runtime::PalmDeviceAccess *device)
 {
     if (!device) return nullptr;
@@ -72,7 +65,7 @@ TodoBackendPlugin::createPalmBackend(WildPalms::Runtime::PalmDeviceAccess *devic
     return std::make_unique<TodoBlobBackend>(m_palmBackend.get(), m_categoryStore.get());
 }
 
-Kalburator::Sync::QSyncCore::ConflictHandler *
+Kalburator::Conflict::ConflictHandler *
 TodoBackendPlugin::createConflictHandler()
 {
     if (!m_device) {
@@ -100,7 +93,7 @@ QIcon TodoBackendPlugin::mainViewIcon() const
 }
 
 void TodoBackendPlugin::enrichConflictSnapshot(
-    Kalburator::Sync::QSyncCore::RecordSnapshot &snapshot,
+    Kalburator::Conflict::RecordSnapshot &snapshot,
     bool /*isSourceSide*/) const
 {
     if (snapshot.content.isEmpty()) return;
@@ -121,7 +114,7 @@ void TodoBackendPlugin::enrichConflictSnapshot(
 }
 
 QString TodoBackendPlugin::formatConflictRecordHtml(
-    const Kalburator::Sync::QSyncCore::RecordSnapshot &snapshot) const
+    const Kalburator::Conflict::RecordSnapshot &snapshot) const
 {
     QString html;
     const QString title    = snapshot.metadata.value(QStringLiteral("title")).toString();
@@ -138,11 +131,3 @@ QString TodoBackendPlugin::formatConflictRecordHtml(
 }
 
 } // namespace WildPalms::TodoPlugin
-
-#include <KPluginFactory>
-
-K_PLUGIN_FACTORY_WITH_JSON(TodoBackendPluginFactory,
-                           "todo-backend-plugin.json",
-                           registerPlugin<WildPalms::TodoPlugin::TodoBackendPlugin>();)
-
-#include "todobackendplugin.moc"

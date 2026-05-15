@@ -1,7 +1,7 @@
 #ifndef WILDPALMS_TODO_TODOBLOBBACKEND_H
 #define WILDPALMS_TODO_TODOBLOBBACKEND_H
 
-#include "iblobbackend.h"
+#include "syncbackend.h"
 
 #include <QObject>
 
@@ -11,7 +11,7 @@ namespace WildPalms::PalmCalendar { class CategoryMappingStore; }
 namespace WildPalms::TodoPlugin {
 
 /**
- * @brief Transcoding IBlobBackend wrapping PalmBackend's "ToDoDB".
+ * @brief Transcoding SyncBackend wrapping PalmBackend's "ToDoDB".
  *
  * Surfaces one collection per populated category slot:
  *   - "palm:todo/0"   "Unfiled" (always present)
@@ -26,7 +26,7 @@ namespace WildPalms::TodoPlugin {
  * Lifetime: does NOT own palmBackend or categoryStore. Caller retains
  * ownership; both must outlive the backend.
  */
-class TodoBlobBackend : public QObject, public Kalburator::Sync::IBlobBackend
+class TodoBlobBackend final : public Kalburator::Sync::SyncBackend
 {
     Q_OBJECT
 public:
@@ -40,7 +40,11 @@ public:
         QObject *parent = nullptr);
     ~TodoBlobBackend() override;
 
-    // --- Identity ---
+    // --- SyncBackend identity ---
+    QString backendType() const override { return QStringLiteral("palm-todo"); }
+    QList<Kalburator::Shape::Shape> nativeShapes() const override { return {}; }
+
+    // --- IBlobBackend identity ---
     QString backendId()   const override;
     QString displayName() const override;
     bool    isAvailable() const override;
@@ -69,6 +73,22 @@ public:
     static int slotFromCollectionId(const QString &collectionId);
     /// Produce "palm:todo/<N>".
     static QString collectionIdForSlot(int slot);
+
+    // --- SyncBackend calendar pure-virtuals — stubs; dispatchBlobSync never calls these ---
+    void loadCalendars(const QString &) override {}
+    void storeCalendars(const QString &,
+                        const QList<KCalendarCore::MemoryCalendar *> &) override {}
+    void startSync(const QString &,
+                   KCalendarCore::MemoryCalendar *,
+                   const QList<KCalendarCore::Incidence::Ptr> &,
+                   const QList<KCalendarCore::Incidence::Ptr> &,
+                   const QMap<QString, QString> &,
+                   const Kalburator::Sync::TranscodingPlan &) override {}
+    void removeItem(const QString &, const QString &) override {}
+    Kalburator::Sync::PushOperation *pushItems(
+        const QString &,
+        const QList<KCalendarCore::Incidence::Ptr> &,
+        const Kalburator::Sync::TranscodingPlan &) override { return nullptr; }
 
 Q_SIGNALS:
     void recordCreated(const QString &recordId);
