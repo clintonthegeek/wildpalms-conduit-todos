@@ -42,7 +42,13 @@ public:
 
     // --- SyncBackend identity ---
     QString backendType() const override { return QStringLiteral("palm-todo"); }
-    QList<Kalburator::Shape::Shape> nativeShapes() const override { return {}; }
+    // K.8b T6 fix: use blob/raw to match the pre-T3 BlobBackendAdapter
+    // wrapping. loadRecords() returns pre-transcoded ICS bytes; the engine
+    // copies them verbatim via the identity blob/raw pipeline.
+    QList<Kalburator::Shape::Shape> nativeShapes() const override {
+        return { { Kalburator::Shape::DomainId{QStringLiteral("blob")},
+                   Kalburator::Shape::EncodingId{QStringLiteral("raw")} } };
+    }
 
     // --- IBlobBackend identity ---
     QString backendId()   const override;
