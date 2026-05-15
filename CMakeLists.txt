@@ -16,11 +16,14 @@ target_include_directories(wildpalms_todos_static BEFORE
     PRIVATE
         $<TARGET_PROPERTY:Kalburator::Sync,INTERFACE_INCLUDE_DIRECTORIES>
 )
+set_target_properties(wildpalms_todos_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 target_link_libraries(wildpalms_todos_static
     PUBLIC
         Kalburator::Sync
     PRIVATE
-        WildPalmsCore
+        # K.8b T6: WildPalmsCore removed to break CMake autogen cycle.
+        # Symbols resolved when this static is pulled into WildPalmsCore.so.
         WildPalmsPalmSync
         WildPalmsPalmCalendar           # CategoryMappingStore + parseCategoryAppInfo
         WildPalmsPalmCodecs             # decodeTodo / encodeTodo
