@@ -153,21 +153,24 @@ void TaskView::loadTasks()
         return;
     }
 
-    // Todos are stored as individual .ics files in the todos/ directory
-    QString todosPath = m_syncPath + QStringLiteral("/todos");
-    QDir todosDir(todosPath);
-
-    if (!todosDir.exists()) {
-        // Create todos directory if it doesn't exist
-        QDir().mkpath(todosPath);
+    // Aggregate-read across all per-Palm-category subdirs under
+    // <sync>/rawfiles/todo/<col>/ (PalmRuntime writes one dir per Palm
+    // ToDo category — palm_todo_0..palm_todo_3).
+    QDir rawfilesDir(m_syncPath + QStringLiteral("/rawfiles/todo"));
+    if (!rawfilesDir.exists()) {
+        QDir().mkpath(rawfilesDir.absolutePath());
         populateModel();
         return;
     }
-
-    // Load all .ics files from todos directory
     QStringList filters;
     filters << QStringLiteral("*.ics");
-    QFileInfoList files = todosDir.entryInfoList(filters, QDir::Files, QDir::Name);
+    QFileInfoList files;
+    const QFileInfoList colDirs = rawfilesDir.entryInfoList(
+        QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    for (const QFileInfo &col : colDirs) {
+        files.append(QDir(col.filePath()).entryInfoList(
+            filters, QDir::Files, QDir::Name));
+    }
 
     KCalendarCore::ICalFormat format;
 
@@ -471,7 +474,9 @@ bool TaskView::saveToFile()
         return false;
     }
 
-    QString todosPath = m_syncPath + QStringLiteral("/todos");
+    // New/saved tasks land in the Palm "Unfiled" collection (palm_todo_0)
+    // so they round-trip through sync — matches a dir PalmRuntime creates.
+    QString todosPath = m_syncPath + QStringLiteral("/rawfiles/todo/palm_todo_0");
     QDir().mkpath(todosPath);
 
     KCalendarCore::ICalFormat format;
