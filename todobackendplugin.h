@@ -45,6 +45,13 @@ public:
     QString     version()          const;
     QStringList claimedDatabases() const { return {QStringLiteral("ToDoDB")}; }
 
+    // F.3: Category slot snapshot — used by PalmRuntime::finishConnect to
+    // write the snapshot into Profile after createPalmBackend populates
+    // m_categoryStore from the live AppInfo block. Returns empty list if
+    // the store hasn't been populated yet.
+    QString     primaryDbName()       const { return QStringLiteral("ToDoDB"); }
+    QStringList categorySlotNames()   const;
+
     // Palm backend — called directly by PalmRuntime (Task 6)
     std::unique_ptr<Kalburator::Sync::SyncBackend>
         createPalmBackend(WildPalms::Runtime::PalmDeviceAccess *device);

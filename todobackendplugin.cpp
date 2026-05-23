@@ -130,4 +130,10 @@ QString TodoBackendPlugin::formatConflictRecordHtml(
     return html;
 }
 
+QStringList TodoBackendPlugin::categorySlotNames() const
+{
+    if (!m_categoryStore) return {};
+    return m_categoryStore->sixteenSlotNames(primaryDbName());
+}
+
 } // namespace WildPalms::TodoPlugin
