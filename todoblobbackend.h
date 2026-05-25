@@ -19,9 +19,10 @@ namespace WildPalms::TodoPlugin {
  *     `categoryStore->slotName("ToDoDB", N)` is non-empty.
  *
  * Records route to/from these collections by PalmRecord::category.
- * loadRecords transcodes wire bytes -> VTODO bytes via TodoIcsTranscoder;
- * createRecord/updateRecord transcode VTODO -> wire and forward to
- * PalmBackend's category-aware createPalmRecord/updatePalmRecord.
+ * loadRecords presents raw PalmRecord wire bytes (br.type="todo"); the
+ * palm<->ical-vtodo conversion lives in the shape graph (PalmToVTodoStage /
+ * VTodoToPalmStage). createRecord/updateRecord consume wire bytes and forward
+ * to PalmBackend's category-aware createPalmRecord/updatePalmRecord.
  *
  * Lifetime: does NOT own palmBackend or categoryStore. Caller retains
  * ownership; both must outlive the backend.
@@ -42,12 +43,12 @@ public:
 
     // --- SyncBackend identity ---
     QString backendType() const override { return QStringLiteral("palm-todo"); }
-    // K.8b T6 fix: use blob/raw to match the pre-T3 BlobBackendAdapter
-    // wrapping. loadRecords() returns pre-transcoded ICS bytes; the engine
-    // copies them verbatim via the identity blob/raw pipeline.
+    // Phase 4: declare (todo, palm) and present raw PalmRecord wire bytes. The
+    // palm<->ical-vtodo conversion is a registered shape edge (TodoDomain
+    // extension); the engine routes palm->ical-vtodo->canon with honest loss.
     QList<Kalburator::Shape::Shape> nativeShapes() const override {
-        return { { Kalburator::Shape::DomainId{QStringLiteral("blob")},
-                   Kalburator::Shape::EncodingId{QStringLiteral("raw")} } };
+        return { { Kalburator::Shape::DomainId{QStringLiteral("todo")},
+                   Kalburator::Shape::EncodingId{QStringLiteral("palm")} } };
     }
 
     // --- IBlobBackend identity ---

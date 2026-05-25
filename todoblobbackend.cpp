@@ -1,7 +1,5 @@
 #include "todoblobbackend.h"
 
-#include "todoicstranscoder.h"
-
 #include "palm/calendar/categorymappingstore.h"
 #include "palm/sync/palmbackend.h"
 #include "palm/sync/palmrecord.h"
@@ -106,13 +104,11 @@ QList<Kalburator::Sync::BackendRecord> TodoBlobBackend::loadRecords(
     for (const auto &pr : records) {
         if (static_cast<int>(pr.category) != slot) continue;
         if (pr.isDeleted()) continue;
-        QByteArray ics = encodePalmToIcs(pr);
-        if (ics.isEmpty()) continue;   // skip undecodable records (e.g. tombstones)
 
         Kalburator::Sync::BackendRecord br;
         br.id           = idForPalmRecord(pr.recordId);
-        br.data         = ics;
-        br.type         = QStringLiteral("text/calendar");
+        br.data         = pr.toWireBytes();
+        br.type         = QStringLiteral("todo");
         br.lastModified = pr.lastModified;
         br.contentHash  = pr.contentHash();
         out.append(br);
@@ -128,13 +124,10 @@ TodoBlobBackend::loadRecord(const QString &recordId)
     auto pr = m_palmBackend->loadPalmRecord(QStringLiteral("ToDoDB"), rid);
     if (!pr) return std::nullopt;
 
-    QByteArray ics = encodePalmToIcs(*pr);
-    if (ics.isEmpty()) return std::nullopt;
-
     Kalburator::Sync::BackendRecord br;
     br.id           = recordId;
-    br.data         = ics;
-    br.type         = QStringLiteral("text/calendar");
+    br.data         = pr->toWireBytes();
+    br.type         = QStringLiteral("todo");
     br.lastModified = pr->lastModified;
     br.contentHash  = pr->contentHash();
     return br;
@@ -146,11 +139,9 @@ QString TodoBlobBackend::createRecord(
 {
     const int slot = slotFromCollectionId(collectionId);
     if (slot < 0 || !m_palmBackend) return {};
+    if (record.data.isEmpty()) return {};
 
-    auto prOpt = decodeIcsToPalm(record.data, slot);
-    if (!prOpt) return {};
-
-    auto pr = *prOpt;
+    auto pr = WildPalms::PalmSync::PalmRecord::fromWireBytes(record.data);
     pr.category     = static_cast<std::uint8_t>(slot);
     pr.recordId     = 0;   // device assigns
     pr.lastModified = record.lastModified.isValid()
@@ -168,6 +159,7 @@ bool TodoBlobBackend::updateRecord(
 {
     std::uint32_t rid = 0;
     if (!decodeId(record.id, &rid) || !m_palmBackend) return false;
+    if (record.data.isEmpty()) return false;
 
     // Look up the existing record to recover its slot (the
     // BackendRecord's id alone doesn't carry the slot).
@@ -176,10 +168,7 @@ bool TodoBlobBackend::updateRecord(
     if (!existing) return false;
     const int slot = static_cast<int>(existing->category);
 
-    auto prOpt = decodeIcsToPalm(record.data, slot);
-    if (!prOpt) return false;
-
-    auto pr = *prOpt;
+    auto pr = WildPalms::PalmSync::PalmRecord::fromWireBytes(record.data);
     pr.recordId     = rid;
     pr.category     = static_cast<std::uint8_t>(slot);
     pr.lastModified = record.lastModified.isValid()
@@ -213,13 +202,11 @@ TodoBlobBackend::modifiedSince(const QString &collectionId,
     for (const auto &pr : records) {
         if (static_cast<int>(pr.category) != slot) continue;
         if (since.isValid() && pr.lastModified <= since) continue;
-        QByteArray ics = encodePalmToIcs(pr);
-        if (ics.isEmpty()) continue;
 
         Kalburator::Sync::BackendRecord br;
         br.id           = idForPalmRecord(pr.recordId);
-        br.data         = ics;
-        br.type         = QStringLiteral("text/calendar");
+        br.data         = pr.toWireBytes();
+        br.type         = QStringLiteral("todo");
         br.lastModified = pr.lastModified;
         br.contentHash  = pr.contentHash();
         out.append(br);

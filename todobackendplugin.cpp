@@ -2,6 +2,7 @@
 
 #include "todoblobbackend.h"
 #include "todoconflicthandler.h"
+#include "tododomainextension.h"
 #include "todoicstranscoder.h"
 #include "taskview.h"
 
@@ -13,6 +14,7 @@
 #include "palm/codecs/todocodec.h"
 
 #include "conflictrecord.h"
+#include "transformationregistry.h"
 
 #include <KCalendarCore/Todo>
 #include <KCalendarCore/ICalFormat>
@@ -33,6 +35,11 @@ TodoBackendPlugin::TodoBackendPlugin()
     : m_categoryStore(std::make_unique<WildPalms::PalmCalendar::CategoryMappingStore>())
     , m_palmConfig(std::make_unique<WildPalms::PalmConflict::PalmBackendConfig>())
 {
+    // Phase 4: register the (todo, palm) peer shape and palm<->ical-vtodo edges
+    // with the process-wide TransformationRegistry at plugin construction
+    // (mirrors CalendarBackendPlugin). Idempotent across instances.
+    TodoDomainExtension::registerWith(
+        Kalburator::Shape::TransformationRegistry::instance());
 }
 
 TodoBackendPlugin::~TodoBackendPlugin() = default;
