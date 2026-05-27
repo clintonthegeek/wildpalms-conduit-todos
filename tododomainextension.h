@@ -1,15 +1,19 @@
 #ifndef WILDPALMS_TODO_TODODOMAINEXTENSION_H
 #define WILDPALMS_TODO_TODODOMAINEXTENSION_H
 
-namespace Kalburator::Shape { class TransformationRegistry; }
+#include <shapecontribution.h>
 
 namespace WildPalms::TodoPlugin {
 
-// Registers the (todo, palm) peer shape and palm<->ical-vtodo edges with the
-// shape graph. The ical-vtodo<->canon hop is libkalburator's (TodoStockShapes).
-class TodoDomainExtension {
+// O7: contributes the (todo, palm) peer shape and palm<->ical-vtodo edges to
+// the shape graph. The ical-vtodo<->canon hop is libkalburator's (TodoStockShapes).
+// PluginManager registers this into the injected ShapeRegistries.
+class TodoPalmShapes : public Kalburator::Shape::ShapeContribution {
 public:
-    static void registerWith(Kalburator::Shape::TransformationRegistry &registry);
+    Kalburator::Shape::DomainId targetDomain() const override;
+    QList<std::pair<Kalburator::Shape::Shape, Kalburator::Shape::PropertyCatalogue>>
+        peerShapes() const override;
+    QList<Kalburator::Shape::TransformationEdge> edges() const override;
 };
 
 } // namespace WildPalms::TodoPlugin

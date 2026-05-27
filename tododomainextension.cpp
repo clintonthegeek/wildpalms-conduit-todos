@@ -1,8 +1,7 @@
 #include "tododomainextension.h"
 
 #include "palmtovtodotransformation.h"
-#include "propertycatalogue.h"
-#include "transformationregistry.h"
+#include <propertycatalogue.h>
 
 using namespace Kalburator::Shape;
 
@@ -27,30 +26,29 @@ PropertyCatalogue makePalmCatalogue()
 
 } // namespace
 
-void TodoDomainExtension::registerWith(TransformationRegistry &registry)
+DomainId TodoPalmShapes::targetDomain() const
+{
+    return DomainId{QStringLiteral("todo")};
+}
+
+QList<std::pair<Shape, PropertyCatalogue>> TodoPalmShapes::peerShapes() const
+{
+    const Shape palm{ DomainId{"todo"}, EncodingId{"palm"} };
+    return { { palm, makePalmCatalogue() } };
+}
+
+QList<TransformationEdge> TodoPalmShapes::edges() const
 {
     const Shape palm { DomainId{"todo"}, EncodingId{"palm"} };
     const Shape vtodo{ DomainId{"todo"}, EncodingId{"ical-vtodo"} };
-
-    // Defensive: libkalburator's todo domain plugin registers the ical-vtodo
-    // peer shape at PluginManager load time (via registerStockPlugins). If that
-    // static-init registrar didn't run in this address space (e.g. a unit test
-    // that skips full plugin init), the vtodo shape is absent and registerEdge
-    // below would assert "to-shape not registered". Register a minimal
-    // placeholder; registerShape is idempotent, so libkalburator's real
-    // catalogue replaces it under the same key when it runs.
-    if (registry.catalogueFor(vtodo) == nullptr) {
-        registry.registerShape(vtodo, {});
-    }
-    registry.registerShape(palm, makePalmCatalogue());
-
-    // palm -> ical-vtodo (lossless; identity X- stamps preserved by vtodo<->canon)
-    registry.registerEdge(TransformationEdge{
-        palm, vtodo, palmToVTodoLoss(), std::make_shared<PalmToVTodoStage>() });
-
-    // ical-vtodo -> palm (lossy; Palm ToDoDB holds a subset of VTODO)
-    registry.registerEdge(TransformationEdge{
-        vtodo, palm, vtodoToPalmLoss(), std::make_shared<VTodoToPalmStage>() });
+    // palm -> ical-vtodo (lossless; identity X- stamps preserved by vtodo<->canon).
+    // ical-vtodo -> palm (lossy; Palm ToDoDB holds a subset of VTODO).
+    // The ical-vtodo endpoint is registered by libkalburator's TodoStockShapes,
+    // which loads earlier in the same PluginManager batch.
+    return {
+        TransformationEdge{ palm, vtodo, palmToVTodoLoss(), std::make_shared<PalmToVTodoStage>() },
+        TransformationEdge{ vtodo, palm, vtodoToPalmLoss(), std::make_shared<VTodoToPalmStage>() },
+    };
 }
 
 } // namespace WildPalms::TodoPlugin
