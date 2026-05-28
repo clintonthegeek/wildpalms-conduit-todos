@@ -41,7 +41,13 @@ TodoBackendPlugin::TodoBackendPlugin()
 QList<std::shared_ptr<Kalburator::Shape::ShapeContribution>>
 TodoBackendPlugin::shapeContributions() const
 {
-    return { std::make_shared<TodoPalmShapes>() };
+    // Timing contract: this runs at PluginManager load time (PalmRuntime ctor),
+    // BEFORE createPalmBackend() populates m_categoryStore from the AppInfo block
+    // at device-connect. The contribution/stages keep a borrowed POINTER (not a
+    // snapshot), so by the time any transform runs (post-connect) the store is
+    // populated. Do not cache the store by value, and do not assume it is
+    // populated here.
+    return { std::make_shared<TodoPalmShapes>(m_categoryStore.get()) };
 }
 
 TodoBackendPlugin::~TodoBackendPlugin() = default;

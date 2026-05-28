@@ -7,22 +7,34 @@ using namespace Kalburator::Shape;
 
 namespace WildPalms::TodoPlugin {
 
+PalmToVTodoStage::PalmToVTodoStage(
+    const WildPalms::PalmCalendar::CategoryMappingStore *cats)
+    : m_cats(cats)
+{
+}
+
 QByteArray PalmToVTodoStage::transform(const QByteArray &sourceBytes) const
 {
     if (sourceBytes.isEmpty()) return {};
     const auto pr = WildPalms::PalmSync::PalmRecord::fromWireBytes(sourceBytes);
-    return encodePalmToIcs(pr);
+    // "ToDoDB" is the only Palm ToDo database name — hardcoded here so the
+    // stage is self-contained and matches the AppInfo reader in the plugin.
+    return encodePalmToIcs(pr, m_cats, QStringLiteral("ToDoDB"));
+}
+
+VTodoToPalmStage::VTodoToPalmStage(
+    const WildPalms::PalmCalendar::CategoryMappingStore *cats)
+    : m_cats(cats)
+{
 }
 
 QByteArray VTodoToPalmStage::transform(const QByteArray &sourceBytes) const
 {
     if (sourceBytes.isEmpty()) return {};
-    // slotHint = -1: the category field of this stage's output is NOT
-    // authoritative. The backend (createRecord/updateRecord) sets the real
-    // slot from collection context on write; X-WP-PALM-CATEGORY-SLOT rides on
-    // the VTODO but the codec does not read it back. Treat the wire bytes'
-    // category as undefined after this stage.
-    const auto prOpt = decodeIcsToPalm(sourceBytes, /*slotHint*/ -1);
+    // The category slot is derived from the iCalendar CATEGORIES property via
+    // the borrowed CategoryMappingStore (name -> slot). With no store / no
+    // categories the slot is 0 (Unfiled).
+    const auto prOpt = decodeIcsToPalm(sourceBytes, m_cats, QStringLiteral("ToDoDB"));
     if (!prOpt) return {};
     return prOpt->toWireBytes();
 }
@@ -40,7 +52,8 @@ LossProfile vtodoToPalmLoss()
     LossProfile p;
     // Palm ToDoDB has no field for these (canon todo property vocabulary):
     p.affected.insert(PropertyId{QStringLiteral("descriptionHtml")}, LossKind::Dropped);
-    p.affected.insert(PropertyId{QStringLiteral("categories")},      LossKind::Dropped);
+    // categories is NO LONGER dropped: the Palm category slot carries the
+    // canonical `categories` field (name-based) via CategoryMappingStore.
     p.affected.insert(PropertyId{QStringLiteral("start")},           LossKind::Dropped);
     p.affected.insert(PropertyId{QStringLiteral("completed")},       LossKind::Dropped);
     p.affected.insert(PropertyId{QStringLiteral("recurrence")},      LossKind::Dropped);

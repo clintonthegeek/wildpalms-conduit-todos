@@ -24,10 +24,10 @@ struct DecodedSide {
     bool       valid = false;
 };
 
-DecodedSide decodeSide(const QByteArray &icsBytes, int slotHint)
+DecodedSide decodeSide(const QByteArray &icsBytes)
 {
     DecodedSide out;
-    auto pr = WildPalms::TodoPlugin::decodeIcsToPalm(icsBytes, slotHint);
+    auto pr = WildPalms::TodoPlugin::decodeIcsToPalm(icsBytes, nullptr, {});
     if (!pr.has_value()) return out;
     auto t = decodeTodo(QByteArrayView(pr->data));
     if (!t.has_value()) return out;
@@ -58,7 +58,7 @@ QByteArray buildMergedIcs(const PalmRecord &peer, const Todo &peerTodo)
     merged.isComplete = true;
     PalmRecord pr = peer;
     pr.data = encodeTodo(merged);
-    return WildPalms::TodoPlugin::encodePalmToIcs(pr);
+    return WildPalms::TodoPlugin::encodePalmToIcs(pr, nullptr, {});
 }
 
 } // namespace
@@ -76,10 +76,11 @@ Kalburator::Conflict::ConflictDecision TodoConflictHandler::handleConflict(
     Kalburator::Conflict::ConflictRecord &conflict,
     const Kalburator::Conflict::ConflictPolicy &policy)
 {
-    // Same-slot decode (slot doesn't matter for the overlay; defaults
-    // to 0 — we re-stamp the merged record with peer's slot below).
-    DecodedSide source = decodeSide(conflict.source.content, 0);
-    DecodedSide target = decodeSide(conflict.target.content, 0);
+    // Category slot is not needed for the overlay merge — the conflict
+    // handler has no access to a CategoryMappingStore (nullptr/empty-db).
+    // The merged record is re-stamped with the peer's slot below.
+    DecodedSide source = decodeSide(conflict.source.content);
+    DecodedSide target = decodeSide(conflict.target.content);
 
     if (!source.valid || !target.valid) {
         m_lastOverlay = QStringLiteral("delegated");

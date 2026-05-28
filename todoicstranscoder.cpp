@@ -1,6 +1,7 @@
 #include "todoicstranscoder.h"
 
 #include "palm/codecs/todocodec.h"
+#include "palm/calendar/categorymappingstore.h"
 
 #include <KCalendarCore/Todo>
 #include <KCalendarCore/ICalFormat>
@@ -97,7 +98,9 @@ WildPalms::PalmCodecs::Todo fromKCalTodo(const KCalendarCore::Todo::Ptr &todo)
 
 } // namespace
 
-QByteArray encodePalmToIcs(const WildPalms::PalmSync::PalmRecord &record)
+QByteArray encodePalmToIcs(const WildPalms::PalmSync::PalmRecord &record,
+                           const WildPalms::PalmCalendar::CategoryMappingStore *cats,
+                           const QString &dbName)
 {
     if (record.data.isEmpty()) return {};
     auto decoded = WildPalms::PalmCodecs::decodeTodo(QByteArrayView(record.data));
@@ -108,6 +111,14 @@ QByteArray encodePalmToIcs(const WildPalms::PalmSync::PalmRecord &record)
                            record.recordId,
                            record.isSecret());
 
+    // Carry the Palm category slot as the iCalendar CATEGORIES property
+    // (name-based). libkalburator's vtodo<->canon stage lifts it into
+    // canon `categories`.
+    if (cats && record.category != 0) {
+        const QString nm = cats->slotName(dbName, record.category);
+        if (!nm.isEmpty()) todo->setCategories(QStringList{nm});
+    }
+
     auto cal = KCalendarCore::MemoryCalendar::Ptr(
         new KCalendarCore::MemoryCalendar(QTimeZone::utc()));
     if (!cal->addTodo(todo)) return {};
@@ -117,7 +128,9 @@ QByteArray encodePalmToIcs(const WildPalms::PalmSync::PalmRecord &record)
 }
 
 std::optional<WildPalms::PalmSync::PalmRecord>
-decodeIcsToPalm(const QByteArray &icsBytes, int slotHint)
+decodeIcsToPalm(const QByteArray &icsBytes,
+                const WildPalms::PalmCalendar::CategoryMappingStore *cats,
+                const QString &dbName)
 {
     if (icsBytes.isEmpty()) return std::nullopt;
 
@@ -137,9 +150,15 @@ decodeIcsToPalm(const QByteArray &icsBytes, int slotHint)
     QByteArray bytes = WildPalms::PalmCodecs::encodeTodo(pod);
     if (bytes.isEmpty()) return std::nullopt;
 
+    // Map the first CATEGORIES name back to a Palm slot. No store or no
+    // categories => slot 0 (Unfiled).
+    const int slot = (cats && !todo->categories().isEmpty())
+        ? cats->slotForName(dbName, todo->categories().constFirst())
+        : 0;
+
     WildPalms::PalmSync::PalmRecord pr;
     pr.data     = bytes;
-    pr.category = static_cast<std::uint8_t>(slotHint);
+    pr.category = static_cast<std::uint8_t>(slot);
     if (todo->secrecy() == KCalendarCore::Incidence::SecrecyPrivate) {
         pr.attributes |= WildPalms::PalmSync::PalmRecord::AttrSecret;
     }

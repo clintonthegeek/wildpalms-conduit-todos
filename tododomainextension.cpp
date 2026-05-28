@@ -26,6 +26,12 @@ PropertyCatalogue makePalmCatalogue()
 
 } // namespace
 
+TodoPalmShapes::TodoPalmShapes(
+    const WildPalms::PalmCalendar::CategoryMappingStore *cats)
+    : m_cats(cats)
+{
+}
+
 DomainId TodoPalmShapes::targetDomain() const
 {
     return DomainId{QStringLiteral("todo")};
@@ -39,15 +45,15 @@ QList<std::pair<Shape, PropertyCatalogue>> TodoPalmShapes::peerShapes() const
 
 QList<TransformationEdge> TodoPalmShapes::edges() const
 {
-    const Shape palm { DomainId{"todo"}, EncodingId{"palm"} };
+    const Shape palm { DomainId{"todo"}, EncodingId{"palm"}      };
     const Shape vtodo{ DomainId{"todo"}, EncodingId{"ical-vtodo"} };
     // palm -> ical-vtodo (lossless; identity X- stamps preserved by vtodo<->canon).
     // ical-vtodo -> palm (lossy; Palm ToDoDB holds a subset of VTODO).
     // The ical-vtodo endpoint is registered by libkalburator's TodoStockShapes,
     // which loads earlier in the same PluginManager batch.
     return {
-        TransformationEdge{ palm, vtodo, palmToVTodoLoss(), std::make_shared<PalmToVTodoStage>() },
-        TransformationEdge{ vtodo, palm, vtodoToPalmLoss(), std::make_shared<VTodoToPalmStage>() },
+        TransformationEdge{ palm, vtodo, palmToVTodoLoss(), std::make_shared<PalmToVTodoStage>(m_cats) },
+        TransformationEdge{ vtodo, palm, vtodoToPalmLoss(), std::make_shared<VTodoToPalmStage>(m_cats) },
     };
 }
 
