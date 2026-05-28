@@ -151,4 +151,10 @@ QStringList TodoBackendPlugin::categorySlotNames() const
     return m_categoryStore->sixteenSlotNames(primaryDbName());
 }
 
+WildPalms::PalmCalendar::CategoryMappingStore *
+TodoBackendPlugin::categoryStore() const
+{
+    return m_categoryStore.get();
+}
+
 } // namespace WildPalms::TodoPlugin
