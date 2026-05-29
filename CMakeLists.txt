@@ -6,6 +6,7 @@ add_library(wildpalms_todos_static STATIC
     palmtovtodotransformation.cpp palmtovtodotransformation.h
     tododomainextension.cpp       tododomainextension.h
     taskview.cpp                  taskview.h
+    hubtodoreader.cpp             hubtodoreader.h
 )
 target_include_directories(wildpalms_todos_static
     PRIVATE
