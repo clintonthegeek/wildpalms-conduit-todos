@@ -109,7 +109,7 @@ QWidget *TodoBackendPlugin::createMainView(QWidget *parent) const
     return v;
 }
 
-void TodoBackendPlugin::setHub(Kalburator::Sync::SyncBackend *hub)
+void TodoBackendPlugin::setHub(Kalburator::Sync::SyncBackendBase *hub)
 {
     Q_ASSERT(hub);
     m_hubReader = std::make_unique<WildPalms::TodoPlugin::HubTodoReader>(

@@ -1,6 +1,6 @@
 #include "hubtodoreader.h"
 
-#include <syncbackend.h>
+#include <syncbackendbase.h>
 #include <backendrecord.h>
 
 namespace {
@@ -20,7 +20,7 @@ QString stripCollectionPrefix(const QString &recordId,
 
 namespace WildPalms::TodoPlugin {
 
-HubTodoReader::HubTodoReader(Kalburator::Sync::SyncBackend *hub,
+HubTodoReader::HubTodoReader(Kalburator::Sync::SyncBackendBase *hub,
                              QString collectionId)
     : m_hub(hub)
     , m_collectionId(std::move(collectionId))

@@ -6,7 +6,7 @@
 #include "plugins/pimplugin.h"
 
 namespace Kalburator::Conflict { struct RecordSnapshot; class ConflictHandler; }
-namespace Kalburator::Sync { class SyncBackend; }
+namespace Kalburator::Sync { class SyncBackend; class SyncBackendBase; }
 namespace WildPalms::PalmCalendar { class CategoryMappingStore; }
 namespace WildPalms::PalmConflict { struct PalmBackendConfig; }
 namespace WildPalms::PalmSync { class PalmBackend; }
@@ -63,7 +63,7 @@ public:
     WildPalms::PalmCalendar::CategoryMappingStore *categoryStore() const;
 
     // Sub-project D: PimPlugin lifecycle hooks.
-    void setHub(Kalburator::Sync::SyncBackend *hub) override;
+    void setHub(Kalburator::Sync::SyncBackendBase *hub) override;
     void setRuntime(WildPalms::Runtime::PalmRuntime *runtime) override;
 
     // Palm backend — called directly by PalmRuntime (Task 6)
