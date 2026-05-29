@@ -13,6 +13,8 @@ class CategoryManager;
 class CategoryModel;
 class CategoryFilterWidget;
 
+namespace WildPalms::TodoPlugin { class HubTodoReader; }
+
 /**
  * @brief Task/Todo data browser view with editing capabilities
  *
@@ -30,6 +32,7 @@ public:
 public Q_SLOTS:
     void loadFromPath(const QString &syncPath);
     void refresh();
+    void setHubReader(WildPalms::TodoPlugin::HubTodoReader *reader);
 
     /**
      * @brief Check if there are unsaved changes
@@ -114,6 +117,7 @@ private:
     QSortFilterProxyModel *m_proxyModel;
 
     QString m_syncPath;
+    WildPalms::TodoPlugin::HubTodoReader *m_hubReader = nullptr; // borrowed
     QList<TaskItem> m_tasks;
     bool m_isDirty;
 };

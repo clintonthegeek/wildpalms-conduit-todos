@@ -1,4 +1,5 @@
 #include "taskview.h"
+#include "hubtodoreader.h"
 #include "widgets/common/categorymanager.h"
 #include "widgets/common/categorymodel.h"
 #include "widgets/common/categoryfilterwidget.h"
@@ -54,11 +55,15 @@ void TaskView::setupUI()
     m_newAction = m_toolbar->addAction(QIcon::fromTheme(QStringLiteral("list-add")),
                                        i18n("New Task"));
     connect(m_newAction, &QAction::triggered, this, &TaskView::onNewTask);
+    // Sub-project D: edit affordances hidden; the view is read-only against
+    // the hub. Re-enabled by sub-project E once write-through lands.
+    m_newAction->setVisible(false);
 
     m_deleteAction = m_toolbar->addAction(QIcon::fromTheme(QStringLiteral("edit-delete")),
                                           i18n("Delete"));
     m_deleteAction->setEnabled(false);
     connect(m_deleteAction, &QAction::triggered, this, &TaskView::onDeleteTask);
+    m_deleteAction->setVisible(false);
 
     m_toggleCompleteAction = m_toolbar->addAction(
         QIcon::fromTheme(QStringLiteral("checkbox")),
@@ -66,6 +71,7 @@ void TaskView::setupUI()
     m_toggleCompleteAction->setEnabled(false);
     connect(m_toggleCompleteAction, &QAction::triggered,
             this, &TaskView::onToggleComplete);
+    m_toggleCompleteAction->setVisible(false);
 
     m_toolbar->addSeparator();
 
@@ -141,6 +147,11 @@ void TaskView::refresh()
     loadTasks();
 }
 
+void TaskView::setHubReader(WildPalms::TodoPlugin::HubTodoReader *reader)
+{
+    m_hubReader = reader;
+}
+
 void TaskView::loadTasks()
 {
     m_tasks.clear();
@@ -148,44 +159,29 @@ void TaskView::loadTasks()
     m_deleteAction->setEnabled(false);
     m_toggleCompleteAction->setEnabled(false);
 
-    if (m_syncPath.isEmpty()) {
+    if (!m_hubReader) {
         populateModel();
         return;
-    }
-
-    // Aggregate-read across all per-Palm-category subdirs under
-    // <sync>/rawfiles/todo/<col>/ (PalmRuntime writes one dir per Palm
-    // ToDo category — palm_todo_0..palm_todo_3).
-    QDir rawfilesDir(m_syncPath + QStringLiteral("/rawfiles/todo"));
-    if (!rawfilesDir.exists()) {
-        QDir().mkpath(rawfilesDir.absolutePath());
-        populateModel();
-        return;
-    }
-    QStringList filters;
-    filters << QStringLiteral("*.ics");
-    QFileInfoList files;
-    const QFileInfoList colDirs = rawfilesDir.entryInfoList(
-        QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-    for (const QFileInfo &col : colDirs) {
-        files.append(QDir(col.filePath()).entryInfoList(
-            filters, QDir::Files, QDir::Name));
     }
 
     KCalendarCore::ICalFormat format;
 
-    for (const QFileInfo &fileInfo : files) {
+    const QStringList ids = m_hubReader->listRecordIds();
+    for (const QString &recordId : ids) {
+        const QByteArray bytes = m_hubReader->recordBytes(recordId);
+        if (bytes.isEmpty()) continue;
+
         KCalendarCore::MemoryCalendar::Ptr calendar(
             new KCalendarCore::MemoryCalendar(QTimeZone::systemTimeZone()));
 
-        if (!format.load(calendar, fileInfo.filePath())) {
+        if (!format.fromString(calendar, QString::fromUtf8(bytes))) {
             continue;
         }
 
         KCalendarCore::Todo::List todos = calendar->todos();
         for (const KCalendarCore::Todo::Ptr &todo : todos) {
             TaskItem task;
-            task.filePath = fileInfo.filePath();
+            task.filePath = recordId;  // hub record id (opaque to view)
             task.uid = todo->uid();
             task.summary = todo->summary();
             task.notes = todo->description();

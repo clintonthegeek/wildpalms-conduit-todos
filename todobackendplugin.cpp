@@ -1,5 +1,6 @@
 #include "todobackendplugin.h"
 
+#include "hubtodoreader.h"
 #include "todoblobbackend.h"
 #include "todoconflicthandler.h"
 #include "tododomainextension.h"
@@ -11,6 +12,7 @@
 #include "palm/conflict/palmbackendconfig.h"
 #include "palm/sync/palmbackend.h"
 #include "runtime/palmdeviceaccess.h"
+#include "runtime/palmruntime.h"
 #include "palm/codecs/todocodec.h"
 
 #include "conflictrecord.h"
@@ -97,7 +99,26 @@ bool TodoBackendPlugin::hasMainView() const { return true; }
 
 QWidget *TodoBackendPlugin::createMainView(QWidget *parent) const
 {
-    return new TaskView(parent);
+    auto *v = new TaskView(parent);
+    v->setHubReader(m_hubReader.get());
+    if (m_runtime) {
+        QObject::connect(m_runtime,
+                         &WildPalms::Runtime::PalmRuntime::syncCompleted,
+                         v, &TaskView::refresh);
+    }
+    return v;
+}
+
+void TodoBackendPlugin::setHub(Kalburator::Sync::SyncBackend *hub)
+{
+    Q_ASSERT(hub);
+    m_hubReader = std::make_unique<WildPalms::TodoPlugin::HubTodoReader>(
+        hub, QStringLiteral("palm:todo"));
+}
+
+void TodoBackendPlugin::setRuntime(WildPalms::Runtime::PalmRuntime *runtime)
+{
+    m_runtime = runtime;
 }
 
 QString TodoBackendPlugin::mainViewName() const { return QStringLiteral("Tasks"); }
