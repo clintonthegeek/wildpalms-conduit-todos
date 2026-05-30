@@ -36,7 +36,7 @@ TodoBlobBackend::TodoBlobBackend(
     WildPalms::PalmSync::PalmBackend *palmBackend,
     const WildPalms::PalmCalendar::CategoryMappingStore *categoryStore,
     QObject *parent)
-    : Kalburator::Sync::SyncBackend(parent)
+    : Kalburator::Sync::SyncBackendBase(parent)
     , m_palmBackend(palmBackend)
     , m_categoryStore(categoryStore)
 {

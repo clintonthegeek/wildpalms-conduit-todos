@@ -66,7 +66,7 @@ QString TodoBackendPlugin::description() const
 }
 QString TodoBackendPlugin::version()     const { return QStringLiteral("2.0"); }
 
-std::unique_ptr<Kalburator::Sync::SyncBackend>
+std::unique_ptr<Kalburator::Sync::SyncBackendBase>
 TodoBackendPlugin::createPalmBackend(WildPalms::Runtime::PalmDeviceAccess *device)
 {
     if (!device) return nullptr;

@@ -6,7 +6,7 @@
 #include "plugins/pimplugin.h"
 
 namespace Kalburator::Conflict { struct RecordSnapshot; class ConflictHandler; }
-namespace Kalburator::Sync { class SyncBackend; class SyncBackendBase; }
+namespace Kalburator::Sync { class SyncBackendBase; }
 namespace WildPalms::PalmCalendar { class CategoryMappingStore; }
 namespace WildPalms::PalmConflict { struct PalmBackendConfig; }
 namespace WildPalms::PalmSync { class PalmBackend; }
@@ -22,7 +22,7 @@ namespace WildPalms::TodoPlugin {
  * in-process by PalmRuntime::registerPalmPlugins() (Task 6).
  *
  * Provides:
- *   - TodoBlobBackend (as SyncBackend) via createPalmBackend() — called
+ *   - TodoBlobBackend (as SyncBackendBase) via createPalmBackend() — called
  *     directly by PalmRuntime; not routed through BackendContributions.
  *   - TodoConflictHandler (todo-aware overlays + Palm delegation).
  *   - TaskView as a main-window tab.
@@ -67,7 +67,7 @@ public:
     void setRuntime(WildPalms::Runtime::PalmRuntime *runtime) override;
 
     // Palm backend — called directly by PalmRuntime (Task 6)
-    std::unique_ptr<Kalburator::Sync::SyncBackend>
+    std::unique_ptr<Kalburator::Sync::SyncBackendBase>
         createPalmBackend(WildPalms::Runtime::PalmDeviceAccess *device);
 
     // Conflict handler

@@ -1,7 +1,7 @@
 #ifndef WILDPALMS_TODO_TODOBLOBBACKEND_H
 #define WILDPALMS_TODO_TODOBLOBBACKEND_H
 
-#include "syncbackend.h"
+#include "syncbackendbase.h"
 
 #include <QObject>
 
@@ -27,7 +27,7 @@ namespace WildPalms::TodoPlugin {
  * Lifetime: does NOT own palmBackend or categoryStore. Caller retains
  * ownership; both must outlive the backend.
  */
-class TodoBlobBackend final : public Kalburator::Sync::SyncBackend
+class TodoBlobBackend final : public Kalburator::Sync::SyncBackendBase
 {
     Q_OBJECT
 public:
@@ -80,20 +80,6 @@ public:
     static int slotFromCollectionId(const QString &collectionId);
     /// Produce "palm:todo/<N>".
     static QString collectionIdForSlot(int slot);
-
-    // --- SyncBackend calendar pure-virtuals — stubs; dispatchBlobSync never calls these ---
-    void loadCalendars(const QString &) override {}
-    void storeCalendars(const QString &,
-                        const QList<KCalendarCore::MemoryCalendar *> &) override {}
-    void startSync(const QString &,
-                   KCalendarCore::MemoryCalendar *,
-                   const QList<KCalendarCore::Incidence::Ptr> &,
-                   const QList<KCalendarCore::Incidence::Ptr> &,
-                   const QMap<QString, QString> &) override {}
-    void removeItem(const QString &, const QString &) override {}
-    Kalburator::Sync::PushOperation *pushItems(
-        const QString &,
-        const QList<KCalendarCore::Incidence::Ptr> &) override { return nullptr; }
 
 Q_SIGNALS:
     void recordCreated(const QString &recordId);
