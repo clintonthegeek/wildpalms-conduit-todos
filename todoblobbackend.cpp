@@ -235,30 +235,8 @@ bool TodoBlobBackend::wipeCollection(const QString &collectionId)
     // ToDoDB name is what WildPalms syncs against; the OS5-enhanced
     // TasksDB-PTod is not currently exposed by this backend.
     Q_UNUSED(collectionId);
-
     if (!m_palmBackend) return false;
-
-    // Walk every PalmRecord in ToDoDB (including soft-deleted ones —
-    // wipe semantics are "leave the DB empty," not "honor deleted
-    // state") and issue a per-record delete via the dbName-aware
-    // path so the canonical "ToDoDB" name reaches the device.
-    //
-    // NOTE: this matches the default IBlobBackend::wipeCollection
-    // contract (collection persists, records gone). A faster
-    // drop+recreate path (dlp_DeleteDB + dlp_CreateDB with creator
-    // 'todo' / type 'DATA') requires extending IPalmDatabaseAccess
-    // in the WildPalms superproject and is out of scope for this
-    // submodule-only commit; tracked separately.
-    bool ok = true;
-    const auto records = m_palmBackend->loadPalmRecords(
-        QStringLiteral("ToDoDB"));
-    for (const auto &pr : records) {
-        if (!m_palmBackend->deletePalmRecord(
-                QStringLiteral("ToDoDB"), pr.recordId)) {
-            ok = false;
-        }
-    }
-    return ok;
+    return m_palmBackend->wipePalmDatabase(QStringLiteral("ToDoDB"));
 }
 
 QList<Kalburator::Sync::BackendRecord>
