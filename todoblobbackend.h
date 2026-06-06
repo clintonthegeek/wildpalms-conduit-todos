@@ -69,6 +69,15 @@ public:
     bool    updateRecord(const Kalburator::Sync::BackendRecord &record) override;
     bool    deleteRecord(const QString &recordId) override;
 
+    // --- Clobber-sync (libkalburator v0.65) ---
+    /// Wipe every record in the underlying ToDoDB so the next push has
+    /// an empty target. The collectionId is accepted but ignored —
+    /// ToDoDB is shared across all category slots, so wiping affects
+    /// every "palm:todo/<N>" collection as well as "palm:todo".
+    /// Returns true if every per-record delete succeeded.
+    /// Used by SyncEngine when ExecutionOverride::clobber is set.
+    bool wipeCollection(const QString &collectionId) override;
+
     // --- Change detection ---
     QList<Kalburator::Sync::BackendRecord> modifiedSince(
         const QString &collectionId, const QDateTime &since) override;
