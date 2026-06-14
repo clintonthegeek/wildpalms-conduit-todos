@@ -2,6 +2,7 @@
 #define WILDPALMS_TODO_TODOBLOBBACKEND_H
 
 #include "syncbackendbase.h"
+#include "palm/sync/palmchangedetection.h"
 
 #include <QObject>
 
@@ -27,7 +28,8 @@ namespace WildPalms::TodoPlugin {
  * Lifetime: does NOT own palmBackend or categoryStore. Caller retains
  * ownership; both must outlive the backend.
  */
-class TodoBlobBackend final : public Kalburator::Sync::SyncBackendBase
+class TodoBlobBackend final : public Kalburator::Sync::SyncBackendBase,
+                              public WildPalms::PalmSync::PalmChangeDetection
 {
     Q_OBJECT
 public:
@@ -96,6 +98,9 @@ Q_SIGNALS:
     void recordDeleted(const QString &recordId);
     void errorOccurred(const QString &error);
     void progressUpdated(int current, int total, const QString &message);
+
+protected:
+    QString currentDbRevision() const override;
 
 private:
     WildPalms::PalmSync::PalmBackend                     *m_palmBackend = nullptr;

@@ -44,6 +44,12 @@ TodoBlobBackend::TodoBlobBackend(
 
 TodoBlobBackend::~TodoBlobBackend() = default;
 
+QString TodoBlobBackend::currentDbRevision() const
+{
+    return m_palmBackend ? m_palmBackend->databaseRevision(QStringLiteral("ToDoDB"))
+                         : QString();
+}
+
 QString TodoBlobBackend::backendId()   const { return QStringLiteral("palm-todo"); }
 QString TodoBlobBackend::displayName() const { return QStringLiteral("Palm ToDo"); }
 bool    TodoBlobBackend::isAvailable() const
